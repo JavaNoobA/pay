@@ -22,7 +22,14 @@ public class BestPayConfig {
     private AliPayAccountConfig aliPayAccountConfig;
 
     @Bean
-    public BestPayService bestPayService(WxPayConfig wxPayConfig, AliPayConfig aliPayConfig) {
+    public BestPayService bestPayService(WxPayConfig wxPayConfig) {
+        AliPayConfig aliPayConfig = new AliPayConfig();
+        aliPayConfig.setAppId(aliPayAccountConfig.getAppId());
+        aliPayConfig.setPrivateKey(aliPayAccountConfig.getPrivateKey());
+        aliPayConfig.setAliPayPublicKey(aliPayAccountConfig.getAliPayPublicKey());
+        aliPayConfig.setReturnUrl(aliPayAccountConfig.getReturnUrl());
+        aliPayConfig.setNotifyUrl(aliPayAccountConfig.getNotifyUrl());
+
         BestPayServiceImpl bestPayService = new BestPayServiceImpl();
         bestPayService.setWxPayConfig(wxPayConfig);
         bestPayService.setAliPayConfig(aliPayConfig);
@@ -41,15 +48,4 @@ public class BestPayConfig {
         return wxPayConfig;
     }
 
-    @Bean
-    public AliPayConfig aliPayAccountConfig() {
-        AliPayConfig aliPayConfig = new AliPayConfig();
-        aliPayConfig.setAppId(aliPayAccountConfig.getAppId());
-        aliPayConfig.setPrivateKey(aliPayAccountConfig.getPrivateKey());
-        aliPayConfig.setAliPayPublicKey(aliPayAccountConfig.getAliPayPublicKey());
-        aliPayConfig.setReturnUrl(aliPayAccountConfig.getReturnUrl());
-        aliPayConfig.setNotifyUrl(aliPayAccountConfig.getNotifyUrl());
-
-        return aliPayConfig;
-    }
 }
