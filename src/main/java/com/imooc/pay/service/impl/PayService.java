@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.math.BigDecimal;
 
 /**
@@ -26,7 +27,7 @@ public class PayService implements IPayService {
     @Autowired
     private BestPayService bestPayService;
 
-    @Autowired
+    @Resource
     private PayInfoMapper payInfoMapper;
 
     @Override
@@ -45,7 +46,7 @@ public class PayService implements IPayService {
         payRequest.setPayTypeEnum(bestPayTypeEnum);
 
         PayResponse response = bestPayService.pay(payRequest);
-        log.info("PayResponse={}", response);
+        log.info("支付 response={}", response);
 
         return response;
     }
@@ -54,13 +55,30 @@ public class PayService implements IPayService {
     public String asyncNotify(String notifyData) {
         // 1.签名检验
 
+
+        final PayResponse notifyResp = bestPayService.asyncNotify(notifyData);
+        log.info("异步通知 response={}", notifyResp);
+
+        PayInfo payInfo = payInfoMapper.selectByOrderNo(Long.parseLong(notifyResp.getOrderId()));
+
+        // 正常情况下 支付信息不会为 null, 需要告警钉钉、短信等
+        if (payInfo == null) {
+            throw new RuntimeException("支付信息为 null");
+        }
+
         // 2.金额检验(从数据库里查订单)
+        if (payInfo.getPayAmount().compareTo(BigDecimal.valueOf(notifyResp.getOrderAmount())) != 0) {
+            throw new RuntimeException("支付金额和数据库订单金额不一致");
+        }
 
         // 3.修改订单支付状态
+        if (!payInfo.getPlatformStatus().equals(OrderStatusEnum.SUCCESS.name())) {
+            payInfo.setPlatformStatus(OrderStatusEnum.SUCCESS.name());
+            payInfo.setPlatformNumber(notifyResp.getOutTradeNo());
+            payInfoMapper.updateByPrimaryKeySelective(payInfo);
+        }
 
         // 4.告诉微信/支付宝不要通知了
-        final PayResponse notifyResp = bestPayService.asyncNotify(notifyData);
-        log.info("notifyResp={}", notifyResp);
         if (notifyResp.getPayPlatformEnum() == BestPayPlatformEnum.WX) {
             return "<xml>\n" +
                     "  <return_code><![CDATA[SUCCESS]]></return_code>\n" +
@@ -70,5 +88,10 @@ public class PayService implements IPayService {
             return "success";
         }
         throw new RuntimeException("异步通知结果出错");
+    }
+
+    @Override
+    public PayInfo queryByOrderId(String orderId) {
+        return payInfoMapper.selectByOrderNo(Long.parseLong(orderId));
     }
 }

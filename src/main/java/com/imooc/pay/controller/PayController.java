@@ -1,6 +1,8 @@
 package com.imooc.pay.controller;
 
+import com.imooc.pay.pojo.PayInfo;
 import com.imooc.pay.service.impl.PayService;
+import com.lly835.bestpay.config.WxPayConfig;
 import com.lly835.bestpay.enums.BestPayPlatformEnum;
 import com.lly835.bestpay.enums.BestPayTypeEnum;
 import com.lly835.bestpay.model.PayResponse;
@@ -25,6 +27,8 @@ public class PayController {
 
     @Autowired
     private PayService payService;
+    @Autowired
+    private WxPayConfig wxPayConfig;
 
     @GetMapping("/create")
     public ModelAndView create(@RequestParam("orderId") String orderId,
@@ -34,6 +38,8 @@ public class PayController {
         Map<String, String> map = new HashMap<>();
         if (BestPayTypeEnum.WXPAY_NATIVE == bestPayTypeEnum) {
             map.put("codeUrl", response.getCodeUrl());
+            map.put("orderId", orderId);
+            map.put("returnUrl", wxPayConfig.getReturnUrl());
             return new ModelAndView("createForWx", map);
         } else if (BestPayTypeEnum.ALIPAY_PC == bestPayTypeEnum) {
             map.put("body", response.getBody());
@@ -46,5 +52,12 @@ public class PayController {
     @ResponseBody
     public String asyncNotify(@RequestBody String notifyData) {
         return payService.asyncNotify(notifyData);
+    }
+
+    @GetMapping("/queryByOrderId")
+    @ResponseBody
+    public PayInfo queryByOrderId(@RequestParam String orderId) {
+        log.info("查询订单支付信息...");
+        return payService.queryByOrderId(orderId);
     }
 }
